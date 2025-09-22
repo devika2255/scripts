@@ -100,4 +100,58 @@ async function detectLocationAndGetBannerType() {
   }
 }
 
+/**
+ * Detect visitor location and banner type from your Worker
+ * @returns {Promise<{country:string, continent:string, state:string|null, bannerType:string}|null>}
+ */
+async function detectLocationAndGetBannerType() {
+  try {
+    // Retrieve the visitor token (optional, for JWT-protected endpoint)
+    const visitorToken = localStorage.getItem('visitorToken');
+
+    // Build siteName from hostname
+    const siteName = window.location.hostname.replace(/^www\./, '').split('.')[0];
+
+    // API URL
+    const apiUrl = `https://consentbit-worker.consentapp.workers.dev/api/v2/cmp/detect-location?siteName=${encodeURIComponent(siteName)}`;
+
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (visitorToken) {
+      headers['Authorization'] = `Bearer ${visitorToken}`;
+    }
+
+    // Fetch location from Worker
+    const response = await fetch(apiUrl, { method: 'GET', headers });
+
+    if (!response.ok) {
+      console.warn('Location API request failed', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Check for required fields
+    if (!data.bannerType || !data.country || !data.continent) {
+      return null;
+    }
+
+    // Optional: store globally
+    window.currentLocation = {
+      country: data.country,
+      continent: data.continent,
+      state: data.state || null,
+      bannerType: data.bannerType
+    };
+
+    return window.currentLocation;
+
+  } catch (error) {
+    console.error('detectLocationAndGetBannerType error:', error);
+    return null;
+  }
+}
 </script>
