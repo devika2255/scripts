@@ -1,46 +1,44 @@
 <script>
-(async function() {
-  function isTokenExpired(token) {
-    if (!token) return true;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp < Math.floor(Date.now() / 1000);
-    } catch {
-      return true;
-    }
+(function() {
+  // --- Generate or retrieve visitor ID ---
+  let visitorId = localStorage.getItem('visitorId');
+  if (!visitorId) {
+    visitorId = crypto.randomUUID();
+    localStorage.setItem('visitorId', visitorId);
   }
 
-  async function getOrCreateVisitorId() {
-    let visitorId = localStorage.getItem('visitorId');
-    if (!visitorId) {
-      visitorId = crypto.randomUUID();
-      localStorage.setItem('visitorId', visitorId);
-    }
-    return visitorId;
+  // --- Generate or retrieve visitor token ---
+  let visitorToken = localStorage.getItem('visitorToken');
+  if (!visitorToken) {
+    visitorToken = crypto.randomUUID();
+    localStorage.setItem('visitorToken', visitorToken);
   }
 
-  async function getVisitorToken() {
-    const existingToken = localStorage.getItem('visitorSessionToken');
-    if (existingToken && !isTokenExpired(existingToken)) return existingToken;
+  // --- Create popup ---
+  const popup = document.createElement('div');
+  popup.style.position = 'fixed';
+  popup.style.top = '20px';
+  popup.style.right = '20px';
+  popup.style.padding = '15px 20px';
+  popup.style.background = '#fff';
+  popup.style.border = '2px solid #333';
+  popup.style.borderRadius = '8px';
+  popup.style.zIndex = 99999;
+  popup.style.fontFamily = 'sans-serif';
+  popup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  popup.style.maxWidth = '300px';
+  popup.style.wordBreak = 'break-word';
 
-    const visitorId = await getOrCreateVisitorId();
-    const siteName = window.location.hostname.replace(/^www\./,'').split('.')[0];
+  popup.innerHTML = `
+    <h4 style="margin:0 0 10px 0">Visitor Info</h4>
+    <p><b>ID:</b> ${visitorId}</p>
+    <p><b>Token:</b> ${visitorToken}</p>
+    <button id="closeVisitorPopup" style="margin-top:10px;padding:5px 10px;cursor:pointer;">Close</button>
+  `;
 
-    const res = await fetch('https://cb-server.web-8fb.workers.dev/api/visitor-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visitorId, siteName })
-    });
+  document.body.appendChild(popup);
 
-    const data = await res.json();
-    localStorage.setItem('visitorSessionToken', data.token);
-    return data.token;
-  }
-
-  const token = await getVisitorToken();
-  const visitorId = localStorage.getItem('visitorId');
-
-  console.log('🆔 Visitor ID:', visitorId);
-  console.log('🔑 Visitor Token:', token);
+  // --- Close button ---
+  document.getElementById('closeVisitorPopup').onclick = () => popup.remove();
 })();
 </script>
